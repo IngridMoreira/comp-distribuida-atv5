@@ -1,123 +1,80 @@
-import yaml
 import networkx as nx
 import matplotlib.pyplot as plt
-from rede_p2p import RedeP2P
-from rede_p2p import No
+from matplotlib.widgets import TextBox, Button, RadioButtons
+from flooding_search import FloodingSearch
+from informed_flooding_search import InformedFloodingSearch
+from random_walk import RandomWalk
+from gerenciador_rede import GerenciadorRede
 
 
-contador_mensagens = 0
+class SeletorAlgoritmo:
+    def __init__(self, algoritmos):
+        self.algoritmos = algoritmos
+        self.algoritmo_selecionado = algoritmos[0]
+
+    def definir_algoritmo(self, rotulo):
+        self.algoritmo_selecionado = rotulo
+
+    def obter_algoritmo_selecionado(self):
+        return self.algoritmo_selecionado
 
 
-def ler_configuracao(caminho_arquivo):
-    with open(caminho_arquivo, "r") as arquivo:
-        dados = yaml.safe_load(arquivo)
-    return dados
+# Função para atualizar o grafo com base na entrada do usuário
+def atualizar_grafo(event):
+    id_no = caixa_texto_no.text
+    id_recurso = caixa_texto_recurso.text
+    ttl = int(caixa_texto_ttl.text)
+
+    algoritmo_selecionado = seletor_algoritmo.obter_algoritmo_selecionado()
+
+    if algoritmo_selecionado == "Busca por Inundação":
+        busca_inundacao.buscar_recurso(id_no, id_recurso, ttl)
+    elif algoritmo_selecionado == "Busca Informada por Inundação":
+        busca_informada.buscar_recurso(id_no, id_recurso, ttl)
+    elif algoritmo_selecionado == "Caminhada Aleatória":
+        caminhante_aleatorio.buscar_recurso(id_no, id_recurso, ttl)
 
 
-def visualizar_rede(rede):
-    posicao = nx.spring_layout(rede.grafo)
-    nx.draw(rede.grafo, posicao, with_labels=True, font_weight="bold")
-    plt.show()
+# Crie uma instância do gerenciador de rede
+caminho_arquivo = "config.yaml"
+gerenciador_rede = GerenciadorRede(caminho_arquivo)
+
+try:
+    gerenciador_rede.criar_rede()
+    rede = gerenciador_rede.obter_rede()
+except ValueError as e:
+    print(f"Erro: {e}")
+    exit()
 
 
-def checar_condicoes(rede, min_nos, max_nos):
-    return (
-        not rede.esta_particionada()
-        and rede.atende_limites(min_nos, max_nos)
-        and rede.tem_recursos()
-        and not rede.tem_aresta_para_si()
-    )
+# Crie instâncias dos algoritmos de busca
+busca_inundacao = FloodingSearch(rede)
+busca_informada = InformedFloodingSearch(rede)
+caminhante_aleatorio = RandomWalk(rede)
 
+# Crie a figura principal e o eixo com dimensões maiores
+figura, eixo = plt.subplots(figsize=(11, 6))
 
-def criar_rede():
-    arquivo_configuracao = "config.yaml"
-    dados_configuracao = ler_configuracao(arquivo_configuracao)
+posicao = nx.spring_layout(rede.grafo)
+nx.draw(rede.grafo, pos=posicao, with_labels=True, font_weight="bold", ax=eixo)
 
-    rede = RedeP2P()
+# Crie caixas de texto para a entrada do usuário
+caixa_texto_no = TextBox(plt.axes([0.1, 0.01, 0.1, 0.05]), "Nó")
+caixa_texto_recurso = TextBox(plt.axes([0.25, 0.01, 0.1, 0.05]), "Recurso")
+caixa_texto_ttl = TextBox(plt.axes([0.4, 0.01, 0.1, 0.05]), "TTL")
 
-    for id_no in range(1, dados_configuracao["num_nodes"] + 1):
-        recursos = dados_configuracao["resources"].get(f"n{id_no}", [])
-        no = No(f"n{id_no}", recursos)
-        rede.adicionar_no(no)
+# Crie botões de rádio para a seleção do algoritmo
+seletor_algoritmo = SeletorAlgoritmo(
+    ["Busca por Inundação", "Busca Informada por Inundação", "Caminhada Aleatória"]
+)
+botoes_radio_algoritmo = RadioButtons(
+    plt.axes([0.55, 0.01, 0.3, 0.1]), seletor_algoritmo.algoritmos
+)
+botoes_radio_algoritmo.on_clicked(seletor_algoritmo.definir_algoritmo)
 
-    for par_aresta in dados_configuracao["edges"]:
-        try:
-            aresta = par_aresta.split(",")
-            no1 = next(no for no in rede.nos if no.id == aresta[0].strip())
-            no2 = next(no for no in rede.nos if no.id == aresta[1].strip())
-        except StopIteration:
-            print(f"Erro: No com ID {aresta[0]} ou {aresta[1]} não encontrado.")
-            continue
-        rede.adicionar_aresta(no1, no2)
+# Crie um botão para acionar a busca
+botao_busca = Button(plt.axes([0.9, 0.01, 0.05, 0.05]), "Buscar")
+botao_busca.on_clicked(atualizar_grafo)
 
-    if checar_condicoes(
-        rede, dados_configuracao["min_neighbors"], dados_configuracao["max_neighbors"]
-    ):
-        return rede
-    else:
-        raise ValueError("A rede não atende às condições necessárias")
-
-
-def anunciar_recurso_encontrado(no, recurso_alvo):
-    print(f"Recurso {recurso_alvo} encontrado pelo nó {no.id}")
-
-
-def flooding_busca_recurso(rede, id_no, id_recurso, ttl):
-    no_origem = next(no for no in rede.nos if no.id == id_no)
-    achou = False
-    for vizinho in no_origem.vizinhos:
-        resultado = enviar_pedido_busca(no_origem, vizinho, id_recurso, ttl - 1)
-        if resultado:
-            achou = True
-    if not achou:
-        print(f"A busca por {id_recurso} não encontrou o recurso.")
-
-
-def enviar_pedido_busca(origem, destino, id_recurso, ttl):
-    global contador_mensagens
-    contador_mensagens += 1
-    achou = False
-    print(
-        f"Enviando busca para o nó {destino.id} pelo nó {origem.id} buscando recurso {id_recurso} com TTL {ttl}"
-    )
-    if destino.tem_recurso(id_recurso) and not destino.requisicao_ja_recebida(
-        id_recurso
-    ):
-        anunciar_recurso_encontrado(destino, id_recurso)
-        achou = True
-    else:
-        if ttl > 0:
-            for vizinho in destino.vizinhos:
-                if (
-                    not vizinho.requisicao_ja_recebida(id_recurso)
-                    and not vizinho.id == origem.id
-                ):
-                    resultado = enviar_pedido_busca(
-                        destino, vizinho, id_recurso, ttl - 1
-                    )
-                    if resultado and not achou:
-                        achou = resultado
-    destino.adiciona_requisicao_recebida(id_recurso)
-    return achou
-
-
-if __name__ == "__main__":
-    rede = criar_rede()
-    # visualizar_rede(rede)
-
-    # flooding = 'f'
-    # informed_flooding = 'if'
-    # random_walk = 'rw'
-    # infomed_random_walk = 'irw'
-
-    id_no = "n1"
-    id_recurso = "r100"
-    ttl = 10
-    algo = "f"
-
-    contador_mensagens = 0
-
-    flooding_busca_recurso(rede, id_no, id_recurso, ttl)
-    print(f"Flooding: Número total de mensagens trocadas: {contador_mensagens}")
-
-    # visualizar_rede(rede)
+# Exiba o gráfico
+plt.show()
