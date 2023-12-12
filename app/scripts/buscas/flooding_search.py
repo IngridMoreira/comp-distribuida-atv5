@@ -15,16 +15,12 @@ class FloodingSearch(Search):
         fila = deque([(None, origem, ttl)])
         resultado = ResultadoBusca()
         ttl_inicial = ttl
-        resultado.path = [{"qtd": 0, "list": []} for _ in range(ttl_inicial + 1)]
+        resultado.path = []
         nos_visitados = []
         grafo = self.rede.grafo
         while fila:
             origem, atual, ttl = fila.popleft()
-            resultado.path[ttl_inicial - ttl]["list"].append(
-                {"no": atual, "origem": origem}
-            )
-            if origem:
-                resultado.path[ttl_inicial - ttl]["qtd"] += 1
+            resultado = self.add_resultado(atual, origem, resultado, ttl_inicial - ttl)
             if not atual in nos_visitados:
                 nos_visitados.append(atual)
                 if id_recurso in grafo.nodes[atual]["recursos"]:
@@ -34,4 +30,14 @@ class FloodingSearch(Search):
                         for vizinho in grafo.neighbors(atual):
                             if not origem or vizinho != origem:
                                 fila.append((atual, vizinho, ttl - 1))
+        return resultado
+
+    def add_resultado(self, no_atual, origem, resultado, nivel):
+        if nivel > len(resultado.path) - 1:
+            resultado.path.append({"list": [], "qtd": 0})
+        resultado.path[nivel]["list"].append({"no": no_atual, "origem": origem})
+        if origem:
+            resultado.path[nivel]["qtd"] += 1
+        resultado.qtd_mens_totais += 1
+        print(f"{origem} -> {no_atual}")
         return resultado
