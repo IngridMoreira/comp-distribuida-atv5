@@ -1,6 +1,5 @@
-import yaml
-from no import No
-from rede_p2p import RedeP2P
+from ..models.no import No
+from ..models.rede_p2p import RedeP2P
 
 
 class GerenciadorRede:
@@ -8,29 +7,20 @@ class GerenciadorRede:
         self.caminho_arquivo = caminho_arquivo
         self.rede = None
 
-    def ler_configuracao(self):
-        # Lê as configurações do arquivo YAML
-        with open(self.caminho_arquivo, "r") as arquivo:
-            dados = yaml.safe_load(arquivo)
-        return dados
-
-    def criar_rede(self):
-        dados_configuracao = self.ler_configuracao()
-
+    def criar_rede(self, dados_configuracao):
         rede = RedeP2P()
 
         # Adiciona nós à rede com base nas configurações
         for id_no in range(1, dados_configuracao["num_nodes"] + 1):
             recursos = dados_configuracao["resources"].get(f"n{id_no}", [])
-            no = No(f"n{id_no}", recursos)
-            rede.adicionar_no(no)
+            rede.adicionar_no(f"n{id_no}", recursos)
 
         # Adiciona arestas à rede com base nas configurações de conexões
         for par_aresta in dados_configuracao["edges"]:
             try:
                 aresta = par_aresta.split(",")
-                no1 = next(no for no in rede.nos if no.id == aresta[0].strip())
-                no2 = next(no for no in rede.nos if no.id == aresta[1].strip())
+                no1 = next(no for no in rede.grafo if no == aresta[0].strip())
+                no2 = next(no for no in rede.grafo if no == aresta[1].strip())
             except StopIteration:
                 print(f"Erro: Nó com ID {aresta[0]} ou {aresta[1]} não encontrado.")
                 continue
@@ -56,5 +46,4 @@ class GerenciadorRede:
         )
 
     def obter_rede(self):
-        # Retorna a instância da rede criada
         return self.rede
