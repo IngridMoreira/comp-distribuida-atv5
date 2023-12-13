@@ -66,6 +66,7 @@
       })
         .then(response => response.text())
         .then(data => {
+          window.location.href = '/teste'
           document.body.innerHTML = data;
         })
         .catch(error => console.error("Error:", error));

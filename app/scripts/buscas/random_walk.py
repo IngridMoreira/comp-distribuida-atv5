@@ -30,16 +30,19 @@ class RandomWalk(Search):
     #             vizinhos_n_visitados = [
     #                 vizinho for vizinho in vizinhos if vizinho not in self.visitados
     #             ]
-    #             while vizinhos_n_visitados:
+    #             while vizinhos_n_visitados and not resultado.rec_encontrado:
     #                 vizinhos_n_visitados = [
     #                     vizinho for vizinho in vizinhos if vizinho not in self.visitados
     #                 ]
     #                 if vizinhos_n_visitados:
     #                     proximo_no = random.choice(vizinhos_n_visitados)
-    #                     self._enviar_pedido_busca(
+    #                     resultado = self._enviar_pedido_busca(
     #                         destino, proximo_no, id_recurso, ttl - 1, resultado
     #                     )
-    #                     resultado = self.add_resultado(destino, proximo_no, resultado, ttl)
+    #                     if not resultado.rec_encontrado:
+    #                         resultado = self.add_resultado(
+    #                             destino, proximo_no, resultado, ttl
+    #                         )
     #             return resultado
     #         else:
     #             return resultado
@@ -60,7 +63,7 @@ class RandomWalk(Search):
     #             vizinhos_escolhidos = [no_inicial, origem]
     #             vizinhos = list(self.rede.grafo.neighbors(destino))
     #             vizinhos_n_visitados = vizinhos
-    #             while vizinhos_n_visitados:
+    #             while vizinhos_n_visitados and not resultado.rec_encontrado:
     #                 vizinhos_n_visitados = [
     #                     vizinho
     #                     for vizinho in vizinhos
@@ -69,7 +72,7 @@ class RandomWalk(Search):
     #                 if vizinhos_n_visitados:
     #                     proximo_no = random.choice(vizinhos_n_visitados)
     #                     vizinhos_escolhidos.append(proximo_no)
-    #                     self._enviar_pedido_busca(
+    #                     resultado = self._enviar_pedido_busca(
     #                         destino,
     #                         proximo_no,
     #                         id_recurso,
@@ -77,9 +80,10 @@ class RandomWalk(Search):
     #                         resultado,
     #                         no_inicial,
     #                     )
-    #                     resultado = self.add_resultado(
-    #                         destino, proximo_no, resultado, ttl
-    #                     )
+    #                     if not resultado.rec_encontrado:
+    #                         resultado = self.add_resultado(
+    #                             destino, proximo_no, resultado, ttl
+    #                         )
     #             return resultado
     #         else:
     #             return resultado
@@ -98,10 +102,10 @@ class RandomWalk(Search):
             return resultado
         else:
             if ttl > 0:
-                vizinhos_escolhidos = [no_inicial, destino]
+                vizinhos_escolhidos = [no_inicial, origem]
                 vizinhos = list(self.rede.grafo.neighbors(destino))
-                vizinhos_n_visitados = vizinhos
-                while vizinhos_n_visitados:
+                vizinhos_n_visitados = vizinhos.copy()
+                while vizinhos_n_visitados and not resultado.rec_encontrado:
                     vizinhos_n_visitados = [
                         vizinho
                         for vizinho in vizinhos
@@ -111,7 +115,7 @@ class RandomWalk(Search):
                         proximo_no = random.choice(vizinhos_n_visitados)
                         vizinhos_escolhidos.append(proximo_no)
                         if proximo_no not in self.visitados:
-                            self._enviar_pedido_busca(
+                            resultado = self._enviar_pedido_busca(
                                 destino,
                                 proximo_no,
                                 id_recurso,
@@ -119,12 +123,14 @@ class RandomWalk(Search):
                                 resultado,
                                 no_inicial,
                             )
-                            resultado = self.add_resultado(
-                                destino, proximo_no, resultado, ttl
-                            )
+
+                            if not resultado.rec_encontrado:
+                                resultado = self.add_resultado(
+                                    destino, proximo_no, resultado, ttl
+                                )
                 return resultado
-            else:
-                return resultado
+
+            return resultado
 
     def add_resultado(self, no_atual, origem, resultado, ttl):
         if not origem:

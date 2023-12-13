@@ -31,6 +31,8 @@ class GerenciadorRede:
             dados_configuracao["min_neighbors"],
             dados_configuracao["max_neighbors"],
         ):
+            for node in rede.grafo.nodes:
+                rede.grafo.nodes[node]["cache"] = {}
             self.rede = rede
         else:
             raise ValueError("A rede não atende às condições necessárias")

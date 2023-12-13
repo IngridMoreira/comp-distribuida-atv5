@@ -7,11 +7,6 @@ from .search import Search
 
 
 class InformedFloodingSearch(Search):
-    def __init__(self, rede):
-        super().__init__(rede)
-        for node in self.rede.grafo.nodes:
-            self.rede.grafo.nodes[node]["cache"] = {}
-
     def buscar_recurso(self, id_no, id_recurso, ttl):
         self.visitados.clear()
         if self.rede.grafo.has_node(id_no):

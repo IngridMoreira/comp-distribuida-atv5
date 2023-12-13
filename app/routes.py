@@ -2,8 +2,10 @@
 import json
 from flask import render_template, request, session
 
+from app.scripts.teste import criar_teste
+
 from .scripts.buscas.informed_flooding_search import InformedFloodingSearch
-from app.scripts.buscas.informed_random_walk import InformedRandomWalk
+from .scripts.buscas.informed_random_walk import InformedRandomWalk
 
 from .scripts.buscas.random_walk import RandomWalk
 from .scripts.buscas.flooding_search import FloodingSearch
@@ -20,7 +22,7 @@ frame_atual = 0
 def add_routes(app):
     random_walk = RandomWalk(app.config.get("REDE"))
     flooding_search = FloodingSearch(app.config.get("REDE"))
-    # informed_random_walk = InformedRandomWalk(app.config.get("REDE"))
+    informed_random_walk = InformedRandomWalk(app.config.get("REDE"))
     informed_flooding_search = InformedFloodingSearch(app.config.get("REDE"))
 
     @app.template_filter("msg_sum")
@@ -49,8 +51,6 @@ def add_routes(app):
         resultado = selecionar_algoritmo(busca["algoritmo"]).buscar_recurso(
             busca["no"], busca["recurso"], int(busca["ttl"])
         )
-        for node in rede.grafo.nodes:
-            print(f"{rede.grafo.nodes[node]['cache']}")
         buscas = json.loads(
             session.get("buscas", []),
         )
@@ -72,10 +72,11 @@ def add_routes(app):
         app.config.get("REDE").limpar_cache()
         return home()
 
-    @app.route("/teste", methods=["POST"])
+    @app.route("/teste", methods=["POST", "GET"])
     def teste():
-        print("Teste")
-        return home()
+        rede = app.config.get("REDE")
+        resultado = criar_teste(rede)
+        return render_template("teste.html", resultado=resultado)
 
     @app.route("/mudar_frame", methods=["POST"])
     def mudar_frame():
@@ -101,8 +102,8 @@ def add_routes(app):
             return random_walk
         if algoritmo == "Busca por Inundação Informada":
             return informed_flooding_search
-        # if algoritmo == "Passeio Aleatório Informado":
-        #     return informed_random_walks
+        if algoritmo == "Passeio Aleatório Informado":
+            return informed_random_walk
 
 
 def plotar_grafo(grafo):
