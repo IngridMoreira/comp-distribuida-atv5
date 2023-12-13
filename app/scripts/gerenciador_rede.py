@@ -1,4 +1,3 @@
-from ..models.no import No
 from ..models.rede_p2p import RedeP2P
 
 

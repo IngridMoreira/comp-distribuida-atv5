@@ -8,6 +8,7 @@ from .search import Search
 
 class FloodingSearch(Search):
     def buscar_recurso(self, id_no, id_recurso, ttl):
+        self.visitados.clear()
         if self.rede.grafo.has_node(id_no):
             return self._enviar_pedido_busca(id_no, id_recurso, ttl)
 
@@ -16,28 +17,38 @@ class FloodingSearch(Search):
         resultado = ResultadoBusca()
         ttl_inicial = ttl
         resultado.path = []
-        nos_visitados = []
         grafo = self.rede.grafo
         while fila:
             origem, atual, ttl = fila.popleft()
-            resultado = self.add_resultado(atual, origem, resultado, ttl_inicial - ttl)
-            if not atual in nos_visitados:
-                nos_visitados.append(atual)
+            if not atual in self.visitados:
+                self.visitados.append(atual)
                 if id_recurso in grafo.nodes[atual]["recursos"]:
+                    resultado.rec_encontrado = True
                     resultado.no_rec_encontrado = atual
+                    resultado.no_rec = [atual]
                 else:
                     if ttl > 0:
                         for vizinho in grafo.neighbors(atual):
                             if not origem or vizinho != origem:
                                 fila.append((atual, vizinho, ttl - 1))
+            resultado = self.add_resultado(
+                atual, origem, resultado, ttl_inicial - ttl, ttl
+            )
         return resultado
 
-    def add_resultado(self, no_atual, origem, resultado, nivel):
+    def add_resultado(self, no_atual, origem, resultado, nivel, ttl):
         if nivel > len(resultado.path) - 1:
             resultado.path.append({"list": [], "qtd": 0})
-        resultado.path[nivel]["list"].append({"no": no_atual, "origem": origem})
+        resultado.path[nivel]["list"].append(
+            {
+                "no": no_atual,
+                "origem": origem,
+            }
+        )
         if origem:
             resultado.path[nivel]["qtd"] += 1
-        resultado.qtd_mens_totais += 1
-        print(f"{origem} -> {no_atual}")
+            resultado.qtd_mens_totais += 1
+        resultado.path[nivel]["ttl"] = ttl
+        resultado.path[nivel]["nos_visitados"] = self.visitados.copy()
+
         return resultado

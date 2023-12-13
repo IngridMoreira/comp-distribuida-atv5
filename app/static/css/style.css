@@ -1,0 +1,110 @@
+h1,
+h3,
+form,
+ul,
+li,
+p {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  line-height: 1.6;
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+h1,
+h3 {
+  color: #333;
+}
+
+#resultado {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+#resultado h3 {
+  color: #333;
+}
+
+#animation-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+#animation-img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+#frame-form {
+  margin-top: 15px;
+  text-align: center;
+}
+
+button {
+  background-color: #4caf50;
+  color: #fff;
+  padding: 10px 15px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+#proximo-btn {
+  margin-right: 0;
+}
+
+.busca-container {
+  width: calc(33.33% - 20px);
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  display: inline-block;
+  margin-right: 20px;
+  margin-bottom: 20px;
+  height: 120px;
+}
+
+.busca-info,
+.resultado-info {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -10px;
+}
+
+.row::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+@media (max-width: 600px) {
+  #resultado {
+    padding: 15px;
+  }
+
+  #animation-container {
+    margin-top: 10px;
+  }
+}

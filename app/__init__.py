@@ -1,5 +1,5 @@
 import sys
-from flask import Flask
+from flask import Flask, session
 import yaml
 
 from app.routes import add_routes

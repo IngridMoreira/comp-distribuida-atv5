@@ -8,6 +8,7 @@ from ...models.resultado_busca import ResultadoBusca
 class Search:
     def __init__(self, rede: RedeP2P):
         self.rede = rede
+        self.visitados = []
 
     def buscar_recurso(self, id_no, id_recurso, ttl) -> ResultadoBusca:
         raise NotImplementedError(

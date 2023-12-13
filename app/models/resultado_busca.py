@@ -6,6 +6,7 @@ class ResultadoBusca:
         self._rec_encontrado = False
         self._qtd_mens_totais = 0
         self._no_rec_encontrado = None
+        self._no_rec = None
         self._id_recurso = None
         self._path = []
 
@@ -48,6 +49,14 @@ class ResultadoBusca:
     @path.setter
     def path(self, value):
         self._path = value
+
+    @property
+    def no_rec(self):
+        return self._no_rec
+
+    @no_rec.setter
+    def no_rec(self, value):
+        self._no_rec = value
 
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, indent=2)

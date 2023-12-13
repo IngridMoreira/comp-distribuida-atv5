@@ -21,9 +21,15 @@ def add_routes(app):
     random_walk = RandomWalk(app.config.get("REDE"))
     flooding_search = FloodingSearch(app.config.get("REDE"))
     # informed_random_walk = InformedRandomWalk(app.config.get("REDE"))
-    # informed_flooding_search = InformedFloodingSearch(app.config.get("REDE"))
+    informed_flooding_search = InformedFloodingSearch(app.config.get("REDE"))
 
     @app.template_filter("msg_sum")
+    def msg_sum(path):
+        global frame_atual
+        return sum(
+            item.get("qtd", 0) for i, item in enumerate(path) if i <= frame_atual
+        )
+
     @app.template_filter("json_decode")
     def json_decode(value):
         return json.loads(value)
@@ -39,27 +45,37 @@ def add_routes(app):
         global frame_atual
         frame_atual = 0
         rede = app.config.get("REDE")
-        nos = request.form.get("nos")
-        recurso = request.form.get("recurso")
-        ttl = int(request.form.get("ttl"))
-        algoritmo = request.form.get("algoritmo")
-        resultado_busca = selecionar_algoritmo(algoritmo).buscar_recurso(
-            nos, recurso, ttl
+        busca = request.form.to_dict()
+        resultado = selecionar_algoritmo(busca["algoritmo"]).buscar_recurso(
+            busca["no"], busca["recurso"], int(busca["ttl"])
         )
-        resultado_completo = {
-            "resultado_busca": resultado_busca.to_json(),
-            "algoritmo": algoritmo,
-            "id_no": nos,
-        }
-        session["resultado_busca"] = json.dumps(resultado_completo)
+        for node in rede.grafo.nodes:
+            print(f"{rede.grafo.nodes[node]['cache']}")
+        buscas = json.loads(
+            session.get("buscas", []),
+        )
+        buscas.append({"busca": busca, "resultado": resultado.to_json()})
+        session["buscas"] = json.dumps(buscas)
         img_data = animacao(rede, frame_atual)
         return render_template(
             "animacao.html",
-            resultado_completo=resultado_completo,
+            buscas=buscas,
             img_data=img_data,
             frame_atual=frame_atual,
-            msg_sum=msg_sum(resultado_busca.path),
         )
+
+    @app.route("/limpar", methods=["POST"])
+    def limpar():
+        global frame_atual
+        frame_atual = 0
+        session["buscas"] = json.dumps([])
+        app.config.get("REDE").limpar_cache()
+        return home()
+
+    @app.route("/teste", methods=["POST"])
+    def teste():
+        print("Teste")
+        return home()
 
     @app.route("/mudar_frame", methods=["POST"])
     def mudar_frame():
@@ -71,17 +87,11 @@ def add_routes(app):
         elif acao == "proximo":
             frame_atual += 1
         img_data = animacao(rede, frame_atual)
-
         return render_template(
             "animacao.html",
-            resultado_completo=json.loads(session.get("resultado_busca")),
+            buscas=json.loads(session.get("buscas")),
             img_data=img_data,
             frame_atual=frame_atual,
-            msg_sum=msg_sum(
-                json.loads(
-                    json.loads(session.get("resultado_busca"))["resultado_busca"]
-                )["_path"]
-            ),
         )
 
     def selecionar_algoritmo(algoritmo):
@@ -91,8 +101,8 @@ def add_routes(app):
             return random_walk
         if algoritmo == "Busca por Inundação Informada":
             return informed_flooding_search
-        if algoritmo == "Passeio Aleatório Informado":
-            return informed_random_walk
+        # if algoritmo == "Passeio Aleatório Informado":
+        #     return informed_random_walks
 
 
 def plotar_grafo(grafo):
@@ -124,12 +134,12 @@ def get_level(resultado_busca, no_com_recurso):
 
 
 def set_node_colors(grafo, passo):
-    resultado_busca = json.loads(session.get("resultado_busca"))
-    resultado_busca["resultado_busca"] = json.loads(resultado_busca["resultado_busca"])
-    nos_atuais = resultado_busca["resultado_busca"]["_path"][passo]["list"]
+    busca = json.loads(session.get("buscas"))[-1]
+    busca["resultado"] = json.loads(busca["resultado"])
+    nos_atuais = busca["resultado"]["_path"][passo]["list"]
     ids_nos_atuais = [node_info["no"] for node_info in nos_atuais]
-    no_com_recurso = resultado_busca["resultado_busca"]["_no_rec_encontrado"]
-    nivel_encontrou = get_level(resultado_busca["resultado_busca"], no_com_recurso)
+    no_com_recurso = busca["resultado"]["_no_rec_encontrado"]
+    nivel_encontrou = get_level(busca["resultado"], no_com_recurso)
     node_colors = [
         "green"
         if no == no_com_recurso and nivel_encontrou <= passo
@@ -174,8 +184,3 @@ def animacao(rede, passo):
     dados_imagem = obter_dados_imagem()
 
     return dados_imagem
-
-
-def msg_sum(path):
-    global frame_atuals
-    return sum(item.get("qtd", 0) for i, item in enumerate(path) if i <= frame_atual)

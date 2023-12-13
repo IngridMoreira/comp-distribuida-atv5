@@ -1,41 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Busca em Rede P2P</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-    <script src="https://d3js.org/d3.v5.min.js"></script>
-  </head>
-  <body>
-    <h1>Parâmetros</h1>
-    <form method="post" action="{{ url_for('buscar') }}">
-      <label for="no">Nós:</label>
-      <input type="text" name="nos" id="nos" required />
 
-      <label for="recurso">Recurso:</label>
-      <input type="text" name="recurso" id="recurso" required />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Busca em Rede P2P</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
 
-      <label for="ttl">TTL:</label>
-      <input type="text" name="ttl" id="ttl" required />
+<body>
+  <h1>Parâmetros</h1>
+  <form method="post" action="{{ url_for('buscar') }}">
+    <label for="no">Nó:</label>
+    <input type="text" name="no" id="no" required />
 
-      <label for="algoritmo">Algoritmo:</label>
-      <select name="algoritmo" id="algoritmo">
-        <option value="Busca por Inundação">Busca por Inundação</option>
-        <option value="Passeio Aleatório">Passeio Aleatório</option>
-        <option value="Busca por Inundação Informada">
-          Busca por Inundação Informada
-        </option>
-        <option value="Passeio Aleatório Informado">
-          Passeio Aleatório Informado
-        </option>
-      </select>
+    <label for="recurso">Recurso:</label>
+    <input type="text" name="recurso" id="recurso" required />
 
-      <button type="submit">Buscar</button>
-    </form>
-    <div id="content">{% block content %}{% endblock %}</div>
-  </body>
+    <label for="ttl">TTL:</label>
+    <input type="number" name="ttl" id="ttl" required />
+
+    <label for="algoritmo">Algoritmo:</label>
+    <select name="algoritmo" id="algoritmo">
+      <option value="Busca por Inundação">Busca por Inundação</option>
+      <option value="Passeio Aleatório">Passeio Aleatório</option>
+      <option value="Busca por Inundação Informada">
+        Busca por Inundação Informada
+      </option>
+      <option value="Passeio Aleatório Informado">
+        Passeio Aleatório Informado
+      </option>
+    </select>
+
+    <button type="submit">Buscar</button>
+    <button id="limpar-btn" type="button" onclick="limparBuscas()">
+      Limpar
+    </button>
+    <button id="teste-btn" type="button" onclick="realizarTeste()">
+      Teste
+    </button>
+  </form>
+  <script>
+    function limparBuscas() {
+      fetch("{{ url_for('limpar') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+      })
+        .then(response => response.text())
+        .then(data => {
+          document.body.innerHTML = data;
+        })
+        .catch(error => console.error("Error:", error));
+    }
+    function realizarTeste() {
+      fetch("{{ url_for('teste') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+      })
+        .then(response => response.text())
+        .then(data => {
+          document.body.innerHTML = data;
+        })
+        .catch(error => console.error("Error:", error));
+    }
+  </script>
+  <div id="content">{% block content %}{% endblock %}</div>
+</body>
+
 </html>

@@ -1,61 +1,87 @@
 {% extends "base.html" %} {% block title %}Busca{% endblock %} {% block content
 %}
 <div id="resultado">
-  {% if resultado_completo %}
-  <p>Algoritmo utilizado: {{ resultado_completo['algoritmo'] }}</p>
-  <p>Nó inicial: {{ resultado_completo['id_no'] }}</p>
-  {% if resultado_completo['resultado_busca'] %}
-  <h3>Resultados da Busca</h3>
+  {% if buscas %}
+  <h3>Buscas Realizadas</h3>
+  <div class="row">
+    {% for busca in buscas %}
+    <div class="busca-container">
+      {% set resultado = busca.resultado|json_decode %}
+      <div class="busca-info">
+        <p>Algoritmo utilizado: {{ busca.busca['algoritmo'] }}</p>
+        <p>Nó inicial: {{ busca.busca['no'] }}</p>
+        <p>Recurso: {{ busca.busca['recurso'] }}</p>
+        <p>TTL: {{ busca.busca['ttl'] }}</p>
+      </div>
+      <div class="resultado-info">
+        <p>Mensagens Totais: {{ resultado._qtd_mens_totais }}</p>
+      </div>
+    </div>
+
+    {% if loop.index % 3 == 0 and not loop.last %}
+  </div>
+  <div class="row">
+    {% endif %}
+    {% endfor %}
+  </div>
+  <h3>Resultados da Última Busca</h3>
+
+  {% set ultima_busca = buscas[-1].resultado|json_decode%}
+  {% set msg_sum = ultima_busca._path|msg_sum%}
   <p>
     <strong>Quantidade de Mensagens:</strong>
     {{msg_sum}}
   </p>
+  <p>
+    <strong>TTL:</strong>
+    {{ultima_busca._path[frame_atual].ttl}}
+  </p>
+  <p>
+    <strong>Nós Visitados:</strong>
+    {% set qtd_visitados = ultima_busca._path[frame_atual].nos_visitados | length %}
+    {{ultima_busca._path[frame_atual].nos_visitados}}({{qtd_visitados}})
+  </p>
+
   {% else %}
   <p>Nenhum resultado encontrado.</p>
-  {% endif %} {% endif %}
-</div>
-<h1>Animação</h1>
-<div id="animation-container">
-  <img
-    src="data:image/png;base64,{{ img_data }}"
-    alt="Random Walk Graph"
-    id="animation-img"
-  />
-</div>
+  {% endif %}
 
-<form id="frame-form">
-  <button
-    id="anterior-btn"
-    type="button"
-    {% if frame_atual == 0 %}disabled{% endif %}
-    onclick="mudarFrame('anterior')"
-  >
-    Anterior
-  </button>
-  {% set decoded_data = resultado_completo.resultado_busca | json_decode %}
-  {% set path_length = decoded_data._path | length %}
-  
-  <button id="proximo-btn" type="button" {% if frame_atual == path_length - 1 %}disabled{% endif %} onclick="mudarFrame('proximo')">
+
+
+  <h1>Animação</h1>
+  <div id="animation-container">
+    <img src="data:image/png;base64,{{ img_data }}" alt="Random Walk Graph" id="animation-img" />
+  </div>
+
+  <form id="frame-form">
+    <button id="anterior-btn" type="button" {% if frame_atual==0 %}disabled{% endif %} onclick="mudarFrame('anterior')">
+      Anterior
+    </button>
+
+    {% set path_length = ultima_busca._path | length %}
+
+    <button id="proximo-btn" type="button" {% if frame_atual==path_length - 1 %}disabled{% endif %}
+      onclick="mudarFrame('proximo')">
       Próximo
-  </button>
-  
-</form>
-<script>
-  function mudarFrame(acao) {
-    fetch("/mudar_frame", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ acao: acao }),
-    })
-      .then((response) => response.text())
-      .then((data) => {
+    </button>
 
-        document.body.innerHTML = data;
+  </form>
+  <script>
+    function mudarFrame(acao) {
+      fetch("/mudar_frame", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ acao: acao }),
       })
-      .catch((error) => console.error("Error:", error));
-  }
-</script>
+        .then((response) => response.text())
+        .then((data) => {
 
-{% endblock %}
+          document.body.innerHTML = data;
+        })
+        .catch((error) => console.error("Error:", error));
+    }
+  </script>
+
+  {% endblock %}

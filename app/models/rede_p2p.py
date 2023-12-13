@@ -30,6 +30,6 @@ class RedeP2P:
     def tem_aresta_para_si(self):
         return any(edge[0] == edge[1] for edge in self.grafo.edges())
 
-    def limpar_requisicoes_recebidas(self):
-        for no in self.grafo.nodes:
-            no["requisicoes_recebidas"] = []
+    def limpar_cache(self):
+        for node in self.grafo.nodes:
+            self.grafo.nodes[node]["cache"] = {}

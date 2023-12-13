@@ -1,49 +1,90 @@
 from collections import deque
+import sys
+
 from ...models.resultado_busca import ResultadoBusca
+
 from .search import Search
 
 
 class InformedFloodingSearch(Search):
     def __init__(self, rede):
         super().__init__(rede)
-        self.cache = {element: None for element in list(rede.grafo.nodes)}
+        for node in self.rede.grafo.nodes:
+            self.rede.grafo.nodes[node]["cache"] = {}
 
     def buscar_recurso(self, id_no, id_recurso, ttl):
+        self.visitados.clear()
         if self.rede.grafo.has_node(id_no):
-            return self._enviar_pedido_busca(id_no, id_recurso, ttl)
+            resultado = ResultadoBusca()
+            fila = deque([(None, id_no, ttl, [id_no])])
 
-    def _enviar_pedido_busca(self, origem, id_recurso, ttl):
-        fila = deque([(None, origem, ttl)])
-        resultado = ResultadoBusca()
-        ttl_inicial = ttl
-        resultado.path = [{"qtd": 0, "list": []} for _ in range(ttl_inicial + 1)]
-        nos_visitados = []
+            return self._enviar_pedido_busca(fila, id_recurso, ttl, resultado, ttl)
+
+    def _enviar_pedido_busca(self, fila, id_recurso, ttl, resultado, ttl_inicial):
         grafo = self.rede.grafo
         while fila:
-            print(self.cache[origem])
-            origem, atual, ttl = fila.popleft()
-            resultado.path[ttl_inicial - ttl]["list"].append(
-                {"no": atual, "origem": origem}
-            )
-            if origem:
-                resultado.path[ttl_inicial - ttl]["qtd"] += 1
-            if not atual in nos_visitados:
-                nos_visitados.append(atual)
+            origem, atual, ttl, path = fila.popleft()
+            if not atual in self.visitados:
+                self.visitados.append(atual)
                 if id_recurso in grafo.nodes[atual]["recursos"]:
+                    if not resultado.no_rec_encontrado:
+                        resultado.rec_encontrado = True
+                        resultado.no_rec_encontrado = atual
+                        resultado.no_rec = [atual]
+                    self.add_valor_cache(resultado, id_recurso, path)
+                elif id_recurso in self.rede.grafo.nodes[atual]["cache"]:
+                    resultado.rec_encontrado = True
                     resultado.no_rec_encontrado = atual
-                if self.cache[origem] and self.cache[origem][id_recurso]:
-                    resultado.no_rec_encontrado = self.cache[origem][id_recurso]
+                    resultado.no_rec = self.rede.grafo.nodes[atual]["cache"][id_recurso]
                 else:
                     if ttl > 0:
                         for vizinho in grafo.neighbors(atual):
                             if not origem or vizinho != origem:
-                                fila.append((atual, vizinho, ttl - 1))
-        if resultado.no_rec_encontrado:
-            if not self.cache[origem]:
-                self.cache[origem] = {}
-            if self.cache[origem][id_recurso]:
-                self.cache[origem][id_recurso].append(resultado.no_rec_encontrado)
-            else:
-                self.cache[origem][id_recurso] = [resultado.no_rec_encontrado]
+                                fila.append(
+                                    (
+                                        atual,
+                                        vizinho,
+                                        ttl - 1,
+                                        path + [vizinho],
+                                    )
+                                )
+
+            self.add_resultado(atual, origem, resultado, ttl_inicial - ttl, ttl)
+            resultado = self._enviar_pedido_busca(
+                fila, id_recurso, ttl - 1, resultado, ttl_inicial
+            )
+
+        return resultado
+
+    def add_valor_cache(self, resultado, id_recurso, path):
+        for no in path:
+            if resultado.no_rec_encontrado:
+                if not id_recurso in self.rede.grafo.nodes[no]["cache"]:
+                    self.rede.grafo.nodes[no]["cache"][id_recurso] = [
+                        resultado.no_rec_encontrado
+                    ]
+                else:
+                    if (
+                        resultado.no_rec_encontrado
+                        not in self.rede.grafo.nodes[no]["cache"][id_recurso]
+                    ):
+                        self.rede.grafo.nodes[no]["cache"][id_recurso].append(
+                            resultado.no_rec_encontrado
+                        )
+
+    def add_resultado(self, no_atual, origem, resultado, nivel, ttl):
+        if nivel > len(resultado.path) - 1:
+            resultado.path.append({"list": [], "qtd": 0})
+        resultado.path[nivel]["list"].append(
+            {
+                "no": no_atual,
+                "origem": origem,
+            }
+        )
+        if origem:
+            resultado.path[nivel]["qtd"] += 1
+            resultado.qtd_mens_totais += 1
+        resultado.path[nivel]["ttl"] = ttl
+        resultado.path[nivel]["nos_visitados"] = self.visitados.copy()
 
         return resultado
